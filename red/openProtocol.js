@@ -72,24 +72,20 @@ module.exports = function (RED) {
 
             clearTimeout(node.timerReconnect);
 
-            node.op = openProtocol.createClient(node.controllerPort, node.controllerIP, opts, (data) => node.onConnect(data));
-            node.op.on("error", (err) => node.onErrorOP(err));
+            node.op = openProtocol.createClient(node.controllerPort, node.controllerIP, opts, (op) => {
+                clearTimeout(node.timerReconnect);
+
+                node.connectionStatus = true;
+    
+                op.on("__SubscribeData__", (data) => node.onSubscribeDataOP(data));
+                op.on("close", (error) => node.onCloseOP(error));
+                op.on("connect", (data) => node.onConnectOP(data));
+                op.on("data", (data) => node.onDataOP(data));
+            });
+            // node.op.on("error", (err) => node.onErrorOP(err));
         };
 
         node.connect();
-
-        node.onConnect = function onConnect(data) {
-
-            clearTimeout(node.timerReconnect);
-
-            node.connectionStatus = true;
-
-            node.op.on("__SubscribeData__", (data) => node.onSubscribeDataOP(data));
-            node.op.on("close", (error) => node.onCloseOP(error));
-            node.op.on("connect", (data) => node.onConnectOP(data));
-            node.op.on("data", (data) => node.onDataOP(data));
-            node.emit("connect", data);
-        };
 
         node.disconnect = function disconnect() {
 
